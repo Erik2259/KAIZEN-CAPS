@@ -1,7 +1,5 @@
--- =============================================================
--- KΛIZEN CΛPS — Schema para Supabase
--- Ejecutar en: Supabase Dashboard → SQL Editor → New Query → Run
--- =============================================================
+-- KΛIZEN CΛPS v2 — Schema
+-- Ejecutar en: Supabase → SQL Editor → New Query → Run
 
 CREATE TABLE IF NOT EXISTS public.kaizen_productos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -10,7 +8,8 @@ CREATE TABLE IF NOT EXISTS public.kaizen_productos (
   descripcion TEXT,
   precio NUMERIC(8,2) NOT NULL,
   categoria TEXT DEFAULT 'Hype',
-  imagen_url TEXT,
+  imagen_url TEXT,               -- legacy compat (primera imagen)
+  imagenes TEXT[] DEFAULT '{}',  -- array para carrusel
   disponible BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -36,9 +35,8 @@ DROP POLICY IF EXISTS "kaizen_auth_delete" ON public.kaizen_productos;
 CREATE POLICY "kaizen_auth_delete" ON public.kaizen_productos
   FOR DELETE TO authenticated USING (true);
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('imagenes', 'imagenes', true)
-ON CONFLICT (id) DO NOTHING;
+-- Storage bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('imagenes', 'imagenes', true) ON CONFLICT (id) DO NOTHING;
 
 DROP POLICY IF EXISTS "imagenes_public_select" ON storage.objects;
 CREATE POLICY "imagenes_public_select" ON storage.objects
@@ -55,3 +53,8 @@ CREATE POLICY "imagenes_auth_update" ON storage.objects
 DROP POLICY IF EXISTS "imagenes_auth_delete" ON storage.objects;
 CREATE POLICY "imagenes_auth_delete" ON storage.objects
   FOR DELETE TO authenticated USING (bucket_id = 'imagenes');
+
+-- Si ya tienes datos con imagen_url, migra así (opcional):
+-- UPDATE public.kaizen_productos
+-- SET imagenes = ARRAY[imagen_url]
+-- WHERE imagen_url IS NOT NULL AND (imagenes IS NULL OR imagenes = '{}');

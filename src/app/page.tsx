@@ -1,48 +1,280 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingBag, X, Flame, Sparkles, Instagram } from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
+import { ShoppingBag, X, Flame, Instagram, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import type { Producto } from '@/types';
 
-const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
-const BRAND = 'KΛIZEN CΛPS';
+const WA = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
 
-function buildWhatsAppLink(p: Producto): string {
-  const lines = [
-    `Hola KΛIZEN 👋`,
-    ``,
-    `Quiero pedir esta gorra:`,
-    `• *${p.nombre}*`,
-    `• Categoría: ${p.categoria}`,
-    `• Precio: $${p.precio.toFixed(2)} MXN`,
-    ``,
-    `¿Sigue disponible? 🧢`,
-  ];
-  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(lines.join('\n'))}`;
+function buildWA(p: Producto) {
+  const txt = encodeURIComponent(
+    `Hola KΛIZEN 👋\n\nQuiero pedir:\n• *${p.nombre}*\n• $${p.precio.toFixed(2)} MXN\n\n¿Sigue disponible? 🧢`
+  );
+  return `https://wa.me/${WA}?text=${txt}`;
 }
 
+function getImages(p: Producto): string[] {
+  if (p.imagenes && p.imagenes.length > 0) return p.imagenes;
+  if (p.imagen_url) return [p.imagen_url];
+  return [];
+}
+
+/* ── GATEWAY ──────────────────────────────────────────────── */
+function GatewayScreen({ onEnter }: { onEnter: () => void }) {
+  return (
+    <motion.div
+      key="gateway"
+      className="fixed inset-0 z-[100] bg-[#0A0A0C] flex flex-col items-center justify-center gap-12"
+      exit={{ y: '-100%', transition: { duration: 0.85, ease: [0.76, 0, 0.24, 1] } }}
+    >
+      {/* Logo Enso */}
+      <div className="logo-pulse select-none">
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="50" stroke="#0047FF" strokeWidth="3" strokeLinecap="round"
+            strokeDasharray="260 60" strokeDashoffset="-10" />
+          <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle"
+            fill="#0047FF" fontSize="38" fontWeight="700" fontFamily="system-ui" letterSpacing="2">
+            Λ
+          </text>
+        </svg>
+      </div>
+
+      <div className="text-center">
+        <p className="brand-mark text-[11px] tracking-[.4em] text-fg-muted mb-2">BOUTIQUE DIGITAL</p>
+        <h1 className="brand-mark text-3xl text-electric-gradient">KΛIZEN CΛPS</h1>
+      </div>
+
+      <motion.button
+        whileTap={{ scale: 0.94 }}
+        onClick={onEnter}
+        className="brand-mark px-10 py-4 rounded-full border border-electric text-electric text-sm tracking-[.3em] hover:bg-electric hover:text-white transition-all duration-300 hover:shadow-[0_0_40px_rgba(0,71,255,.5)]"
+      >
+        [ ENTRΛR ]
+      </motion.button>
+
+      <p className="absolute bottom-8 text-[9px] text-fg-muted tracking-widest opacity-40">DROP 01 · LIVE</p>
+    </motion.div>
+  );
+}
+
+/* ── EMBLA CAROUSEL ───────────────────────────────────────── */
+function ImageCarousel({ images }: { images: string[] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => setCurrent(emblaApi.selectedScrollSnap());
+    emblaApi.on('select', onSelect);
+    return () => { emblaApi.off('select', onSelect); };
+  }, [emblaApi]);
+
+  const prev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const next = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  if (images.length === 0) {
+    return (
+      <div className="w-full aspect-square flex items-center justify-center">
+        <span className="text-fg-muted text-xs">Sin imagen</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full">
+      <div ref={emblaRef} className="overflow-hidden w-full">
+        <div className="flex">
+          {images.map((url, i) => (
+            <div key={i} className="flex-[0_0_100%] aspect-square flex items-center justify-center p-6 bg-gradient-to-b from-electric/5 to-transparent">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt=""
+                className="max-w-full max-h-full object-contain animate-float drop-shadow-[0_24px_48px_rgba(0,71,255,.45)]"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Arrows — solo si hay más de 1 imagen */}
+      {images.length > 1 && (
+        <>
+          <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          {/* Dots */}
+          <div className="flex justify-center gap-1.5 pt-3 pb-1">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => emblaApi?.scrollTo(i)}
+                className={`embla-dot ${i === current ? 'active' : ''}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── PRODUCT CARD ─────────────────────────────────────────── */
+function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
+  const imgs = getImages(p);
+  return (
+    <motion.button
+      layoutId={`card-${p.id}`}
+      onClick={onTap}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.4 }}
+      whileTap={{ scale: 0.96 }}
+      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left"
+    >
+      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0 flex items-center justify-center p-4">
+        {imgs[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imgs[0]} alt={p.nombre} className="max-w-full max-h-full object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]" />
+        ) : (
+          <div className="w-full h-full rounded-xl bg-bg-border/30 flex items-center justify-center text-fg-muted text-[10px]">Sin imagen</div>
+        )}
+      </motion.div>
+
+      <motion.span layoutId={`cat-${p.id}`} className="absolute top-3 left-3 text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
+        {p.categoria}
+      </motion.span>
+
+      {imgs.length > 1 && (
+        <span className="absolute top-3 right-3 text-[9px] tracking-widest text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80">
+          {imgs.length}✦
+        </span>
+      )}
+
+      <motion.div layoutId={`info-${p.id}`} className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/90 to-transparent">
+        <motion.h3 layoutId={`name-${p.id}`} className="brand-mark text-[13px] md:text-sm text-fg leading-tight line-clamp-1">{p.nombre}</motion.h3>
+        <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-sm font-bold">
+          ${p.precio.toFixed(0)}<span className="text-[10px] text-fg-muted ml-1 font-normal">MXN</span>
+        </motion.p>
+      </motion.div>
+    </motion.button>
+  );
+}
+
+/* ── PRODUCT MODAL ────────────────────────────────────────── */
+function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
+  const imgs = getImages(p);
+
+  const handleWA = () => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(50);
+    window.open(buildWA(p), '_blank', 'noreferrer');
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+      initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
+      animate={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
+      style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        layoutId={`card-${p.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="glass relative w-full sm:max-w-2xl max-h-[92dvh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:grid sm:grid-cols-2"
+        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+      >
+        {/* Close */}
+        <button onClick={onClose} aria-label="Cerrar"
+          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Handle mobile */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-bg-border" />
+        </div>
+
+        {/* Carousel */}
+        <motion.div layoutId={`img-${p.id}`} className="flex-shrink-0 sm:h-full overflow-hidden">
+          <ImageCarousel images={imgs} />
+        </motion.div>
+
+        {/* Info + CTA */}
+        <div className="flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-2">
+            <motion.span layoutId={`cat-${p.id}`} className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
+              {p.categoria}
+            </motion.span>
+            <motion.div layoutId={`info-${p.id}`} className="mt-3">
+              <motion.h2 layoutId={`name-${p.id}`} className="brand-mark text-2xl md:text-3xl">{p.nombre}</motion.h2>
+              <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-3xl font-bold">
+                ${p.precio.toFixed(2)}<span className="text-sm text-fg-muted ml-2 font-normal">MXN</span>
+              </motion.p>
+            </motion.div>
+
+            {p.descripcion && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                className="mt-4 text-sm text-fg-muted leading-relaxed whitespace-pre-line">
+                {p.descripcion}
+              </motion.p>
+            )}
+
+            <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="mt-5 space-y-1.5 text-xs text-fg-muted">
+              {['Calidad G5 — idéntica a la original', 'Stock limitado del drop', 'Envío seguro o entrega en zona'].map(t => (
+                <li key={t} className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-electric flex-shrink-0" />{t}
+                </li>
+              ))}
+            </motion.ul>
+          </div>
+
+          {/* CTA */}
+          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
+            className="flex-shrink-0 p-4 border-t border-bg-border bg-bg/80 backdrop-blur">
+            <button
+              onClick={handleWA}
+              className="btn-sheen w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-electric text-white font-semibold tracking-wide active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(0,71,255,.6)]"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              PEDIR POR WHΛTSΛPP
+            </button>
+            <p className="mt-2 text-center text-[9px] text-fg-muted tracking-widest">CHECKOUT DIRECTO · RESPUESTA INMEDIATA</p>
+          </motion.div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ── MAIN PAGE ────────────────────────────────────────────── */
 export default function BoutiquePage() {
+  const [entered, setEntered] = useState(false);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Producto | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
+        const sb = createClient();
+        const { data, error } = await sb
           .from('kaizen_productos')
           .select('*')
           .eq('disponible', true)
           .order('created_at', { ascending: false });
         if (error) throw error;
         setProductos((data ?? []) as Producto[]);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Error cargando';
-        setErr(msg);
+      } catch (e) {
+        console.error('[kaizen]', e);
       } finally {
         setLoading(false);
       }
@@ -56,305 +288,106 @@ export default function BoutiquePage() {
   }, [selected]);
 
   return (
-    <main className="bg-glow min-h-dvh relative">
-      {/* NAV */}
-      <nav className="sticky top-0 z-40 px-5 md:px-8 py-4 backdrop-blur-lg bg-bg/60 border-b border-bg-border/40">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <span className="brand-mark text-[13px] md:text-[15px] tracking-widest text-fg">{BRAND}</span>
-          <div className="flex items-center gap-2 text-[10px] md:text-xs text-fg-muted tracking-widest">
-            <span className="h-1.5 w-1.5 rounded-full bg-electric animate-pulse-glow" />
-            DROP 01 · LIVE
-          </div>
-        </div>
-      </nav>
-
-      {/* HERO */}
-      <section className="px-5 md:px-8 pt-10 md:pt-20 pb-8 md:pb-16 max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="md:grid md:grid-cols-2 md:gap-12 md:items-center"
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-bg-border text-[10px] tracking-widest text-fg-muted uppercase mb-6">
-              <Sparkles className="w-3 h-3 text-electric" />
-              Edición limitada · Calidad G5
-            </div>
-
-            <h1 className="brand-mark text-5xl md:text-7xl leading-[0.95] tracking-tight text-electric-gradient">
-              Cada gorra<br />
-              <span className="text-electric">define</span><br />
-              un status.
-            </h1>
-
-            <p className="mt-5 md:mt-7 text-sm md:text-base text-fg-muted leading-relaxed max-w-md">
-              Pieza por pieza. Drop por drop. Solo las más hype, curadas para los que entienden el juego.
-            </p>
-
-            <div className="mt-8 flex items-center gap-3 md:gap-4">
-              <a
-                href="#drop"
-                className="inline-flex items-center gap-2 px-5 md:px-6 py-3 md:py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,0.5)]"
-              >
-                <Flame className="w-4 h-4" />
-                Ver el Drop
-              </a>
-              <span className="text-xs text-fg-muted">{productos.length} piezas disponibles</span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center justify-center">
-            <div className="relative w-[420px] h-[420px] glass rounded-[32px] flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-electric/20 via-transparent to-transparent" />
-              <div className="brand-mark text-[120px] text-electric/30 select-none">Λ</div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* GRID */}
-      <section id="drop" className="px-5 md:px-8 pb-32 max-w-6xl mx-auto">
-        <div className="flex items-baseline justify-between mb-5 md:mb-8">
-          <h2 className="brand-mark text-lg md:text-2xl tracking-widest">CATÁLOGO</h2>
-          <span className="text-[10px] md:text-xs tracking-widest text-fg-muted uppercase">Tap para ver</span>
-        </div>
-
-        {loading ? (
-          <SkeletonGrid />
-        ) : err ? (
-          <ErrorState msg={err} />
-        ) : productos.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
-            {productos.map((p, i) => (
-              <ProductCard key={p.id} producto={p} onTap={() => setSelected(p)} index={i} />
-            ))}
-          </motion.div>
-        )}
-      </section>
-
-      {/* FOOTER */}
-      <footer className="border-t border-bg-border/40 px-5 md:px-8 py-8 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between">
-          <span className="brand-mark text-xs tracking-widest text-fg-muted">
-            © {new Date().getFullYear()} {BRAND}
-          </span>
-          <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Instagram"
-            className="text-fg-muted hover:text-electric transition-colors"
-          >
-            <Instagram className="w-4 h-4" />
-          </a>
-        </div>
-      </footer>
-
+    <>
+      {/* Gateway overlay — siempre montado hasta que entre */}
       <AnimatePresence>
-        {selected && <ProductDetail producto={selected} onClose={() => setSelected(null)} />}
+        {!entered && <GatewayScreen onEnter={() => setEntered(true)} />}
       </AnimatePresence>
-    </main>
-  );
-}
 
-function ProductCard({ producto, onTap, index }: { producto: Producto; onTap: () => void; index: number }) {
-  return (
-    <motion.button
-      layoutId={`card-${producto.id}`}
-      onClick={onTap}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
-      whileTap={{ scale: 0.97 }}
-      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left group"
-    >
-      <motion.div
-        layoutId={`img-wrap-${producto.id}`}
-        className="absolute inset-0 flex items-center justify-center p-4"
-      >
-        {producto.imagen_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <motion.img
-            layoutId={`img-${producto.id}`}
-            src={producto.imagen_url}
-            alt={producto.nombre}
-            className="max-w-full max-h-full object-contain drop-shadow-[0_10px_25px_rgba(0,71,255,0.25)] animate-float"
-          />
-        ) : (
-          <div className="w-full h-full rounded-xl bg-bg-border/40 flex items-center justify-center text-fg-muted text-xs">
-            Sin imagen
+      {/* Boutique — se carga en background */}
+      <main className="bg-glow min-h-dvh">
+        {/* NAV */}
+        <nav className="sticky top-0 z-40 px-5 md:px-10 py-4 backdrop-blur-lg bg-bg/60 border-b border-bg-border/40">
+          <div className="flex items-center justify-between max-w-6xl mx-auto">
+            <span className="brand-mark text-[13px] tracking-widest">KΛIZEN CΛPS</span>
+            <div className="flex items-center gap-2 text-[10px] text-fg-muted tracking-widest">
+              <span className="h-1.5 w-1.5 rounded-full bg-electric animate-pulse-glow" />
+              DROP 01 · LIVE
+            </div>
           </div>
-        )}
-      </motion.div>
+        </nav>
 
-      <motion.span
-        layoutId={`cat-${producto.id}`}
-        className="absolute top-3 left-3 text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80"
-      >
-        {producto.categoria}
-      </motion.span>
-
-      <motion.div
-        layoutId={`info-${producto.id}`}
-        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/90 to-transparent"
-      >
-        <motion.h3
-          layoutId={`name-${producto.id}`}
-          className="brand-mark text-[13px] md:text-sm tracking-wide text-fg leading-tight line-clamp-1"
-        >
-          {producto.nombre}
-        </motion.h3>
-        <motion.p layoutId={`price-${producto.id}`} className="mt-1 text-electric text-sm md:text-base font-bold">
-          ${producto.precio.toFixed(0)}
-          <span className="text-[10px] text-fg-muted ml-1 font-normal">MXN</span>
-        </motion.p>
-      </motion.div>
-    </motion.button>
-  );
-}
-
-function ProductDetail({ producto, onClose }: { producto: Producto; onClose: () => void }) {
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-      initial={{ backgroundColor: 'rgba(10,10,12,0)' }}
-      animate={{ backgroundColor: 'rgba(10,10,12,0.85)' }}
-      exit={{ backgroundColor: 'rgba(10,10,12,0)' }}
-      onClick={onClose}
-    >
-      <motion.div
-        layoutId={`card-${producto.id}`}
-        onClick={(e) => e.stopPropagation()}
-        className="glass relative w-full sm:max-w-2xl h-[90dvh] sm:h-auto sm:max-h-[90dvh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:grid sm:grid-cols-2"
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      >
-        <button
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="sm:hidden flex justify-center pt-3">
-          <div className="w-10 h-1 rounded-full bg-bg-border" />
-        </div>
-
-        <motion.div
-          layoutId={`img-wrap-${producto.id}`}
-          className="relative flex-shrink-0 h-[45dvh] sm:h-full flex items-center justify-center p-8 bg-gradient-to-b sm:bg-gradient-to-r from-electric/5 to-transparent"
-        >
-          {producto.imagen_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <motion.img
-              layoutId={`img-${producto.id}`}
-              src={producto.imagen_url}
-              alt={producto.nombre}
-              className="max-w-full max-h-full object-contain drop-shadow-[0_20px_40px_rgba(0,71,255,0.4)] animate-float"
-            />
-          ) : (
-            <div className="w-full h-full rounded-xl bg-bg-border/40" />
-          )}
-        </motion.div>
-
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
-            <motion.span
-              layoutId={`cat-${producto.id}`}
-              className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80"
-            >
-              {producto.categoria}
-            </motion.span>
-
-            <motion.div layoutId={`info-${producto.id}`} className="mt-4">
-              <motion.h2 layoutId={`name-${producto.id}`} className="brand-mark text-2xl md:text-3xl tracking-wide">
-                {producto.nombre}
-              </motion.h2>
-              <motion.p layoutId={`price-${producto.id}`} className="mt-2 text-electric text-3xl font-bold">
-                ${producto.precio.toFixed(2)}
-                <span className="text-sm text-fg-muted ml-2 font-normal">MXN</span>
-              </motion.p>
-            </motion.div>
-
-            {producto.descripcion && (
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-5 text-sm text-fg-muted leading-relaxed whitespace-pre-line"
-              >
-                {producto.descripcion}
-              </motion.p>
-            )}
-
-            <motion.ul
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-6 space-y-2 text-xs text-fg-muted"
-            >
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-electric" />Calidad G5 — idéntica a la original</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-electric" />Stock limitado del drop</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-electric" />Envío seguro o entrega en zona</li>
-            </motion.ul>
-          </div>
-
+        {/* HERO */}
+        <section className="px-5 md:px-10 pt-10 md:pt-20 pb-10 max-w-6xl mx-auto">
           <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="flex-shrink-0 p-4 border-t border-bg-border bg-bg/80 backdrop-blur"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: entered ? 1 : 0, y: entered ? 0 : 20 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="md:grid md:grid-cols-2 md:gap-16 md:items-center"
           >
-            <a
-              href={buildWhatsAppLink(producto)}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-electric text-white font-semibold tracking-wide active:scale-[0.98] transition-all hover:shadow-[0_0_40px_rgba(0,71,255,0.6)]"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              Pedir por WhatsApp
-            </a>
-            <p className="mt-2 text-center text-[10px] text-fg-muted tracking-wide">
-              Checkout directo · Respuesta inmediata
-            </p>
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-bg-border text-[10px] tracking-widest text-fg-muted uppercase mb-6">
+                <Flame className="w-3 h-3 text-electric" />
+                Edición limitada · Calidad G5
+              </div>
+              <h1 className="brand-mark text-5xl md:text-7xl leading-[0.92] tracking-tight text-electric-gradient">
+                Cada gorra<br /><span className="text-electric">define</span><br />un status.
+              </h1>
+              <p className="mt-5 text-sm md:text-base text-fg-muted leading-relaxed max-w-md">
+                Drop por drop. Solo las más hype, curadas para los que entienden el juego.
+              </p>
+              <div className="mt-8 flex items-center gap-4">
+                <a href="#drop" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,.5)]">
+                  <Flame className="w-4 h-4" />Ver el Drop
+                </a>
+                <span className="text-xs text-fg-muted">{productos.length} disponibles</span>
+              </div>
+            </div>
+
+            {/* Desktop hero ornament */}
+            <div className="hidden md:flex items-center justify-center">
+              <div className="relative w-[400px] h-[400px] glass rounded-[32px] flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-electric/15 via-transparent to-transparent" />
+                <div className="brand-mark text-[110px] text-electric/25 select-none logo-pulse">Λ</div>
+              </div>
+            </div>
           </motion.div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
+        </section>
 
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="aspect-[3/4] rounded-2xl bg-bg-card/60 border border-bg-border animate-pulse" />
-      ))}
-    </div>
-  );
-}
+        {/* GRID */}
+        <section id="drop" className="px-5 md:px-10 pb-32 max-w-6xl mx-auto">
+          <div className="flex items-baseline justify-between mb-6">
+            <h2 className="brand-mark text-base md:text-xl tracking-widest">CATÁLOGO</h2>
+            <span className="text-[10px] tracking-widest text-fg-muted uppercase">Tap para inspeccionar</span>
+          </div>
 
-function EmptyState() {
-  return (
-    <div className="glass rounded-2xl p-10 text-center">
-      <Flame className="w-8 h-8 text-electric mx-auto mb-3" />
-      <p className="brand-mark tracking-widest text-sm">DROP AGOTADO</p>
-      <p className="mt-2 text-xs text-fg-muted">Próximo restock pronto. Sigue el IG.</p>
-    </div>
-  );
-}
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-[3/4] rounded-2xl bg-bg-card/60 border border-bg-border animate-pulse" />
+              ))}
+            </div>
+          ) : productos.length === 0 ? (
+            <div className="glass rounded-2xl p-10 text-center">
+              <Flame className="w-8 h-8 text-electric mx-auto mb-3" />
+              <p className="brand-mark tracking-widest text-sm">DROP AGOTADO</p>
+              <p className="mt-2 text-xs text-fg-muted">Próximo restock pronto.</p>
+            </div>
+          ) : (
+            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+              {productos.map((p, i) => (
+                <ProductCard key={p.id} p={p} onTap={() => setSelected(p)} index={i} />
+              ))}
+            </motion.div>
+          )}
+        </section>
 
-function ErrorState({ msg }: { msg: string }) {
-  return (
-    <div className="glass rounded-2xl p-6 text-center border-red-500/40">
-      <p className="brand-mark tracking-widest text-sm text-red-400">ERROR DE CONEXIÓN</p>
-      <p className="mt-2 text-xs text-fg-muted">{msg}</p>
-      <p className="mt-3 text-[10px] text-fg-muted">
-        Verifica variables NEXT_PUBLIC_SUPABASE_URL / ANON_KEY en Vercel.
-      </p>
-    </div>
+        {/* FOOTER */}
+        <footer className="border-t border-bg-border/40 px-5 py-8 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between">
+            <span className="brand-mark text-xs tracking-widest text-fg-muted">© {new Date().getFullYear()} KΛIZEN CΛPS</span>
+            <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"
+              className="text-fg-muted hover:text-electric transition-colors">
+              <Instagram className="w-4 h-4" />
+            </a>
+          </div>
+        </footer>
+      </main>
+
+      {/* MODAL */}
+      <AnimatePresence>
+        {selected && <ProductModal p={selected} onClose={() => setSelected(null)} />}
+      </AnimatePresence>
+    </>
   );
 }

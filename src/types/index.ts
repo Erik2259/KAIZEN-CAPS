@@ -5,7 +5,8 @@ export interface Producto {
   descripcion: string | null;
   precio: number;
   categoria: string;
-  imagen_url: string | null;
+  imagen_url: string | null;   // legacy compat
+  imagenes: string[] | null;   // array para carrusel
   disponible: boolean;
   created_at: string;
 }

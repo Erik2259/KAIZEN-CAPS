@@ -3,21 +3,12 @@ import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const space = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space',
-  display: 'swap',
-  weight: ['500', '600', '700'],
-});
+const space = Space_Grotesk({ subsets: ['latin'], variable: '--font-space', display: 'swap', weight: ['500','600','700'] });
 
 export const metadata: Metadata = {
   title: 'KΛIZEN CΛPS — Hype Drops',
-  description: 'Boutique digital de gorras hypebeast calidad G5. Drops exclusivos.',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'KΛIZEN CΛPS',
-  },
+  description: 'Boutique digital de gorras hypebeast calidad G5.',
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'KΛIZEN CΛPS' },
 };
 
 export const viewport: Viewport = {
