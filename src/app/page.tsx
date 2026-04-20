@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ShoppingBag, X, Flame, Instagram, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { KaizenLogo } from '@/components/KaizenLogo';
 import type { Producto } from '@/types';
 
 const WA = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
@@ -22,7 +23,7 @@ function getImages(p: Producto): string[] {
   return [];
 }
 
-/* ── GATEWAY ──────────────────────────────────────────────── */
+/* ── GATEWAY ─────────────────────────────────────────────── */
 function GatewayScreen({ onEnter }: { onEnter: () => void }) {
   return (
     <motion.div
@@ -30,22 +31,7 @@ function GatewayScreen({ onEnter }: { onEnter: () => void }) {
       className="fixed inset-0 z-[100] bg-[#0A0A0C] flex flex-col items-center justify-center gap-12"
       exit={{ y: '-100%', transition: { duration: 0.85, ease: [0.76, 0, 0.24, 1] } }}
     >
-      {/* Logo Enso */}
-      <div className="logo-pulse select-none">
-        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="60" cy="60" r="50" stroke="#0047FF" strokeWidth="3" strokeLinecap="round"
-            strokeDasharray="260 60" strokeDashoffset="-10" />
-          <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle"
-            fill="#0047FF" fontSize="38" fontWeight="700" fontFamily="system-ui" letterSpacing="2">
-            Λ
-          </text>
-        </svg>
-      </div>
-
-      <div className="text-center">
-        <p className="brand-mark text-[11px] tracking-[.4em] text-fg-muted mb-2">BOUTIQUE DIGITAL</p>
-        <h1 className="brand-mark text-3xl text-electric-gradient">KΛIZEN CΛPS</h1>
-      </div>
+      <KaizenLogo variant="stacked" size={160} pulse className="select-none" />
 
       <motion.button
         whileTap={{ scale: 0.94 }}
@@ -60,7 +46,7 @@ function GatewayScreen({ onEnter }: { onEnter: () => void }) {
   );
 }
 
-/* ── EMBLA CAROUSEL ───────────────────────────────────────── */
+/* ── EMBLA CAROUSEL ──────────────────────────────────────── */
 function ImageCarousel({ images }: { images: string[] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
   const [current, setCurrent] = useState(0);
@@ -100,7 +86,6 @@ function ImageCarousel({ images }: { images: string[] }) {
         </div>
       </div>
 
-      {/* Arrows — solo si hay más de 1 imagen */}
       {images.length > 1 && (
         <>
           <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
@@ -109,14 +94,9 @@ function ImageCarousel({ images }: { images: string[] }) {
           <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
             <ChevronRight className="w-4 h-4" />
           </button>
-          {/* Dots */}
           <div className="flex justify-center gap-1.5 pt-3 pb-1">
             {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => emblaApi?.scrollTo(i)}
-                className={`embla-dot ${i === current ? 'active' : ''}`}
-              />
+              <button key={i} onClick={() => emblaApi?.scrollTo(i)} className={`embla-dot ${i === current ? 'active' : ''}`} />
             ))}
           </div>
         </>
@@ -125,7 +105,7 @@ function ImageCarousel({ images }: { images: string[] }) {
   );
 }
 
-/* ── PRODUCT CARD ─────────────────────────────────────────── */
+/* ── PRODUCT CARD ────────────────────────────────────────── */
 function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
   const imgs = getImages(p);
   return (
@@ -167,7 +147,7 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
   );
 }
 
-/* ── PRODUCT MODAL ────────────────────────────────────────── */
+/* ── PRODUCT MODAL ───────────────────────────────────────── */
 function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
   const imgs = getImages(p);
 
@@ -191,23 +171,19 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
         className="glass relative w-full sm:max-w-2xl max-h-[92dvh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:grid sm:grid-cols-2"
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
       >
-        {/* Close */}
         <button onClick={onClose} aria-label="Cerrar"
           className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
           <X className="w-4 h-4" />
         </button>
 
-        {/* Handle mobile */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-bg-border" />
         </div>
 
-        {/* Carousel */}
         <motion.div layoutId={`img-${p.id}`} className="flex-shrink-0 sm:h-full overflow-hidden">
           <ImageCarousel images={imgs} />
         </motion.div>
 
-        {/* Info + CTA */}
         <div className="flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-2">
             <motion.span layoutId={`cat-${p.id}`} className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
@@ -237,7 +213,6 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
             </motion.ul>
           </div>
 
-          {/* CTA */}
           <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
             className="flex-shrink-0 p-4 border-t border-bg-border bg-bg/80 backdrop-blur">
             <button
@@ -255,7 +230,7 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
   );
 }
 
-/* ── MAIN PAGE ────────────────────────────────────────────── */
+/* ── MAIN PAGE ───────────────────────────────────────────── */
 export default function BoutiquePage() {
   const [entered, setEntered] = useState(false);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -289,17 +264,15 @@ export default function BoutiquePage() {
 
   return (
     <>
-      {/* Gateway overlay — siempre montado hasta que entre */}
       <AnimatePresence>
         {!entered && <GatewayScreen onEnter={() => setEntered(true)} />}
       </AnimatePresence>
 
-      {/* Boutique — se carga en background */}
       <main className="bg-glow min-h-dvh">
         {/* NAV */}
-        <nav className="sticky top-0 z-40 px-5 md:px-10 py-4 backdrop-blur-lg bg-bg/60 border-b border-bg-border/40">
+        <nav className="sticky top-0 z-40 px-5 md:px-10 py-3 backdrop-blur-lg bg-bg/60 border-b border-bg-border/40">
           <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <span className="brand-mark text-[13px] tracking-widest">KΛIZEN CΛPS</span>
+            <KaizenLogo variant="horizontal" size={32} />
             <div className="flex items-center gap-2 text-[10px] text-fg-muted tracking-widest">
               <span className="h-1.5 w-1.5 rounded-full bg-electric animate-pulse-glow" />
               DROP 01 · LIVE
@@ -334,11 +307,11 @@ export default function BoutiquePage() {
               </div>
             </div>
 
-            {/* Desktop hero ornament */}
+            {/* Desktop hero — logo centrado en card glass */}
             <div className="hidden md:flex items-center justify-center">
               <div className="relative w-[400px] h-[400px] glass rounded-[32px] flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-electric/15 via-transparent to-transparent" />
-                <div className="brand-mark text-[110px] text-electric/25 select-none logo-pulse">Λ</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-electric/10 via-transparent to-transparent" />
+                <KaizenLogo variant="stacked" size={220} pulse className="relative z-10" />
               </div>
             </div>
           </motion.div>
@@ -375,7 +348,7 @@ export default function BoutiquePage() {
         {/* FOOTER */}
         <footer className="border-t border-bg-border/40 px-5 py-8 max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
-            <span className="brand-mark text-xs tracking-widest text-fg-muted">© {new Date().getFullYear()} KΛIZEN CΛPS</span>
+            <KaizenLogo variant="horizontal" size={24} className="opacity-50" />
             <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"
               className="text-fg-muted hover:text-electric transition-colors">
               <Instagram className="w-4 h-4" />
@@ -384,7 +357,6 @@ export default function BoutiquePage() {
         </footer>
       </main>
 
-      {/* MODAL */}
       <AnimatePresence>
         {selected && <ProductModal p={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
