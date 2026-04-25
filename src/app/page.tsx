@@ -122,7 +122,7 @@ export default function BoutiquePage() {
   >
     {/* Imagen principal */}
     <Image
-      src="/assets/banner_vault.jpg"
+      src="/assets/banner_vault.png"
       alt="KΛIZEN CΛPS"
       fill
       priority
