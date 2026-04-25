@@ -105,22 +105,44 @@ export default function BoutiquePage() {
               </div>
             </div>
 
-            {/* Desktop hero — banner_vault.jpg o logo */}
-            <div className="hidden md:flex items-center justify-center">
-              <div className="relative w-[420px] h-[420px] glass rounded-[32px] overflow-hidden flex items-center justify-center">
-                {/* Arrastra banner_vault.jpg a /public/assets/ para activar */}
-                <Image
-                  src="/assets/banner_vault.jpg"
-                  alt="KΛIZEN CΛPS"
-                  fill
-                  priority
-                  className="object-cover opacity-40"
-                  onError={e => { (e.target as HTMLElement).style.display = 'none'; }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-br from-electric/15 via-transparent to-transparent" />
-                <KaizenLogo variant="stacked" size={220} pulse className="relative z-10" />
-              </div>
-            </div>
+            {/* Desktop hero — Banner ancho con neon LED azul */}
+<div className="hidden md:flex items-center justify-center">
+  <div
+    className="relative w-full max-w-[560px] rounded-2xl overflow-hidden"
+    style={{
+      aspectRatio: '16/7',
+      boxShadow: `
+        0 0 0 1px rgba(0,71,255,0.5),
+        0 0 12px 2px rgba(0,71,255,0.4),
+        0 0 30px 6px rgba(0,71,255,0.25),
+        0 0 60px 12px rgba(0,71,255,0.12),
+        inset 0 0 30px rgba(0,71,255,0.05)
+      `,
+    }}
+  >
+    {/* Imagen principal */}
+    <Image
+      src="/assets/banner_vault.jpg"
+      alt="KΛIZEN CΛPS"
+      fill
+      priority
+      className="object-cover"
+    />
+
+    {/* Vignette sutil en bordes */}
+    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C]/40 via-transparent to-[#0A0A0C]/20 pointer-events-none" />
+    <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0C]/30 via-transparent to-[#0A0A0C]/30 pointer-events-none" />
+
+    {/* Borde neon animado — capa superior */}
+    <div
+      className="absolute inset-0 rounded-2xl pointer-events-none"
+      style={{
+        border: '1px solid rgba(0,71,255,0.6)',
+        animation: 'neon-border 3s ease-in-out infinite',
+      }}
+    />
+  </div>
+</div>
           </motion.div>
         </section>
 

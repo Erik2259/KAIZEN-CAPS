@@ -121,3 +121,14 @@ body {
   50%      { box-shadow: 0 0 60px rgba(0,71,255,.8); opacity: 1; }
 }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+@keyframes neon-border {
+  0%, 100% {
+    border-color: rgba(0,71,255,0.5);
+    box-shadow: inset 0 0 8px rgba(0,71,255,0.1);
+  }
+  50% {
+    border-color: rgba(0,71,255,0.9);
+    box-shadow: inset 0 0 20px rgba(0,71,255,0.2);
+  }
+}
