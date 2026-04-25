@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
+import Image from 'next/image';
 import { ShoppingBag, X, Flame, Instagram, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { KaizenLogo } from '@/components/KaizenLogo';
@@ -10,11 +11,26 @@ import type { Producto } from '@/types';
 
 const WA = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
 
+const CATEGORIAS_FILTER = [
+  'Todos',
+  'KΛIZEN Essentials',
+  'Hype Selection',
+  'The Vault',
+] as const;
+
 function buildWA(p: Producto) {
-  const txt = encodeURIComponent(
-    `Hola KΛIZEN 👋\n\nQuiero pedir:\n• *${p.nombre}*\n• $${p.precio.toFixed(2)} MXN\n\n¿Sigue disponible? 🧢`
-  );
-  return `https://wa.me/${WA}?text=${txt}`;
+  const msg = [
+    `KΛIZEN CΛPS. Me interesa la pieza de la bóveda.`,
+    ``,
+    `Producto: ${p.nombre}`,
+    `Precio: $${p.precio.toFixed(2)} MXN`,
+    `Mi nombre es: `,
+    ``,
+    `Intención:`,
+    `( ) Quiero comprar ya`,
+    `( ) Solo deseo información`,
+  ].join('\n');
+  return `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
 }
 
 function getImages(p: Producto): string[] {
@@ -32,7 +48,6 @@ function GatewayScreen({ onEnter }: { onEnter: () => void }) {
       exit={{ y: '-100%', transition: { duration: 0.85, ease: [0.76, 0, 0.24, 1] } }}
     >
       <KaizenLogo variant="stacked" size={160} pulse className="select-none" />
-
       <motion.button
         whileTap={{ scale: 0.94 }}
         onClick={onEnter}
@@ -40,14 +55,13 @@ function GatewayScreen({ onEnter }: { onEnter: () => void }) {
       >
         [ ENTRΛR ]
       </motion.button>
-
       <p className="absolute bottom-8 text-[9px] text-fg-muted tracking-widest opacity-40">DROP 01 · LIVE</p>
     </motion.div>
   );
 }
 
 /* ── EMBLA CAROUSEL ──────────────────────────────────────── */
-function ImageCarousel({ images }: { images: string[] }) {
+function ImageCarousel({ images, nombre }: { images: string[]; nombre: string }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
   const [current, setCurrent] = useState(0);
 
@@ -63,23 +77,25 @@ function ImageCarousel({ images }: { images: string[] }) {
 
   if (images.length === 0) {
     return (
-      <div className="w-full aspect-square flex items-center justify-center">
+      <div className="w-full aspect-square flex items-center justify-center bg-bg-card">
         <span className="text-fg-muted text-xs">Sin imagen</span>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full bg-gradient-to-b from-electric/5 to-transparent">
       <div ref={emblaRef} className="overflow-hidden w-full">
         <div className="flex">
           {images.map((url, i) => (
-            <div key={i} className="flex-[0_0_100%] aspect-square flex items-center justify-center p-6 bg-gradient-to-b from-electric/5 to-transparent">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            <div key={i} className="flex-[0_0_100%] relative aspect-square">
+              <Image
                 src={url}
-                alt=""
-                className="max-w-full max-h-full object-contain animate-float drop-shadow-[0_24px_48px_rgba(0,71,255,.45)]"
+                alt={`${nombre} — vista ${i + 1}`}
+                fill
+                sizes="(max-width: 640px) 100vw, 50vw"
+                className="object-contain p-6 animate-float drop-shadow-[0_24px_48px_rgba(0,71,255,.4)]"
+                priority={i === 0}
               />
             </div>
           ))}
@@ -88,15 +104,21 @@ function ImageCarousel({ images }: { images: string[] }) {
 
       {images.length > 1 && (
         <>
-          <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+          <button onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform z-10">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+          <button onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform z-10">
             <ChevronRight className="w-4 h-4" />
           </button>
-          <div className="flex justify-center gap-1.5 pt-3 pb-1">
+          <div className="flex justify-center gap-1.5 py-3">
             {images.map((_, i) => (
-              <button key={i} onClick={() => emblaApi?.scrollTo(i)} className={`embla-dot ${i === current ? 'active' : ''}`} />
+              <button
+                key={i}
+                onClick={() => emblaApi?.scrollTo(i)}
+                className={`embla-dot ${i === current ? 'active' : ''}`}
+              />
             ))}
           </div>
         </>
@@ -114,33 +136,51 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       onClick={onTap}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
-      whileTap={{ scale: 0.96 }}
-      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left"
+      transition={{ delay: index * 0.04, duration: 0.35 }}
+      whileTap={{ scale: 0.97 }}
+      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left w-full"
     >
-      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0 flex items-center justify-center p-4">
+      {/* Imagen */}
+      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0">
         {imgs[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imgs[0]} alt={p.nombre} className="max-w-full max-h-full object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]" />
+          <div className="relative w-full h-full p-4">
+            <Image
+              src={imgs[0]}
+              alt={p.nombre}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
+            />
+          </div>
         ) : (
-          <div className="w-full h-full rounded-xl bg-bg-border/30 flex items-center justify-center text-fg-muted text-[10px]">Sin imagen</div>
+          <div className="w-full h-full flex items-center justify-center text-fg-muted text-[10px]">
+            Sin imagen
+          </div>
         )}
       </motion.div>
 
-      <motion.span layoutId={`cat-${p.id}`} className="absolute top-3 left-3 text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
+      {/* Badges */}
+      <motion.span layoutId={`cat-${p.id}`}
+        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
         {p.categoria}
       </motion.span>
 
       {imgs.length > 1 && (
-        <span className="absolute top-3 right-3 text-[9px] tracking-widest text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80">
+        <span className="absolute top-3 right-3 text-[9px] text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
           {imgs.length}✦
         </span>
       )}
 
-      <motion.div layoutId={`info-${p.id}`} className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/90 to-transparent">
-        <motion.h3 layoutId={`name-${p.id}`} className="brand-mark text-[13px] md:text-sm text-fg leading-tight line-clamp-1">{p.nombre}</motion.h3>
+      {/* Info */}
+      <motion.div layoutId={`info-${p.id}`}
+        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10">
+        <motion.h3 layoutId={`name-${p.id}`}
+          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1">
+          {p.nombre}
+        </motion.h3>
         <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-sm font-bold">
-          ${p.precio.toFixed(0)}<span className="text-[10px] text-fg-muted ml-1 font-normal">MXN</span>
+          ${p.precio.toFixed(0)}
+          <span className="text-[10px] text-fg-muted ml-1 font-normal">MXN</span>
         </motion.p>
       </motion.div>
     </motion.button>
@@ -160,52 +200,80 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
     <motion.div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
       initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
-      animate={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      animate={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
       exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
-      style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+      style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       onClick={onClose}
     >
       <motion.div
         layoutId={`card-${p.id}`}
         onClick={(e) => e.stopPropagation()}
         className="glass relative w-full sm:max-w-2xl max-h-[92dvh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:grid sm:grid-cols-2"
-        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
       >
+        {/* Close */}
         <button onClick={onClose} aria-label="Cerrar"
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
           <X className="w-4 h-4" />
         </button>
 
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
+        {/* Handle mobile */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 z-20 relative">
           <div className="w-10 h-1 rounded-full bg-bg-border" />
         </div>
 
+        {/* Carousel */}
         <motion.div layoutId={`img-${p.id}`} className="flex-shrink-0 sm:h-full overflow-hidden">
-          <ImageCarousel images={imgs} />
+          <ImageCarousel images={imgs} nombre={p.nombre} />
         </motion.div>
 
+        {/* Info + CTA */}
         <div className="flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-2">
-            <motion.span layoutId={`cat-${p.id}`} className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
+            <motion.span layoutId={`cat-${p.id}`}
+              className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
               {p.categoria}
             </motion.span>
+
             <motion.div layoutId={`info-${p.id}`} className="mt-3">
-              <motion.h2 layoutId={`name-${p.id}`} className="brand-mark text-2xl md:text-3xl">{p.nombre}</motion.h2>
+              <motion.h2 layoutId={`name-${p.id}`} className="brand-mark text-2xl md:text-3xl tracking-wide">
+                {p.nombre}
+              </motion.h2>
               <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-3xl font-bold">
-                ${p.precio.toFixed(2)}<span className="text-sm text-fg-muted ml-2 font-normal">MXN</span>
+                ${p.precio.toFixed(2)}
+                <span className="text-sm text-fg-muted ml-2 font-normal">MXN</span>
               </motion.p>
             </motion.div>
 
+            {/* Stock */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="mt-3 flex items-center gap-2"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${p.stock > 2 ? 'bg-green-400' : p.stock > 0 ? 'bg-yellow-400' : 'bg-red-400'}`} />
+              <span className="text-[10px] text-fg-muted tracking-widest">
+                {p.stock > 2 ? 'Disponible' : p.stock > 0 ? `Últimas ${p.stock} piezas` : 'Sin stock'}
+              </span>
+            </motion.div>
+
             {p.descripcion && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+              <motion.p
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="mt-4 text-sm text-fg-muted leading-relaxed whitespace-pre-line">
                 {p.descripcion}
               </motion.p>
             )}
 
-            <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+            <motion.ul
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
               className="mt-5 space-y-1.5 text-xs text-fg-muted">
-              {['Calidad G5 — idéntica a la original', 'Stock limitado del drop', 'Envío seguro o entrega en zona'].map(t => (
+              {[
+                'Calidad de lujo — selección curada',
+                'Stock limitado del drop',
+                'Envío seguro o entrega en zona',
+              ].map(t => (
                 <li key={t} className="flex items-center gap-2">
                   <span className="w-1 h-1 rounded-full bg-electric flex-shrink-0" />{t}
                 </li>
@@ -213,16 +281,21 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
             </motion.ul>
           </div>
 
-          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
+          {/* CTA */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
             className="flex-shrink-0 p-4 border-t border-bg-border bg-bg/80 backdrop-blur">
             <button
               onClick={handleWA}
-              className="btn-sheen w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-electric text-white font-semibold tracking-wide active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(0,71,255,.6)]"
+              disabled={p.stock === 0}
+              className="btn-sheen w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-electric text-white font-semibold tracking-wide active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(0,71,255,.6)] disabled:opacity-40 disabled:cursor-not-allowed disabled:animate-none"
             >
               <ShoppingBag className="w-4 h-4" />
-              PEDIR POR WHΛTSΛPP
+              [ INICIΛR COMPRΛ ]
             </button>
-            <p className="mt-2 text-center text-[9px] text-fg-muted tracking-widest">CHECKOUT DIRECTO · RESPUESTA INMEDIATA</p>
+            <p className="mt-2 text-center text-[9px] text-fg-muted tracking-widest">
+              CHECKOUT DIRECTO · RESPUESTA INMEDIATA
+            </p>
           </motion.div>
         </div>
       </motion.div>
@@ -234,8 +307,10 @@ function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
 export default function BoutiquePage() {
   const [entered, setEntered] = useState(false);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [filtered, setFiltered] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Producto | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string>('Todos');
 
   useEffect(() => {
     const load = async () => {
@@ -244,10 +319,12 @@ export default function BoutiquePage() {
         const { data, error } = await sb
           .from('kaizen_productos')
           .select('*')
-          .eq('disponible', true)
+          .gt('stock', 0)
           .order('created_at', { ascending: false });
         if (error) throw error;
-        setProductos((data ?? []) as Producto[]);
+        const list = (data ?? []) as Producto[];
+        setProductos(list);
+        setFiltered(list);
       } catch (e) {
         console.error('[kaizen]', e);
       } finally {
@@ -256,6 +333,14 @@ export default function BoutiquePage() {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    setFiltered(
+      activeFilter === 'Todos'
+        ? productos
+        : productos.filter(p => p.categoria === activeFilter)
+    );
+  }, [activeFilter, productos]);
 
   useEffect(() => {
     document.body.style.overflow = selected ? 'hidden' : '';
@@ -270,12 +355,19 @@ export default function BoutiquePage() {
 
       <main className="bg-glow min-h-dvh">
         {/* NAV */}
-        <nav className="sticky top-0 z-40 px-5 md:px-10 py-3 backdrop-blur-lg bg-bg/60 border-b border-bg-border/40">
+        <nav className="sticky top-0 z-40 px-5 md:px-10 py-3 backdrop-blur-xl bg-bg/70 border-b border-bg-border/40">
           <div className="flex items-center justify-between max-w-6xl mx-auto">
             <KaizenLogo variant="horizontal" size={32} />
-            <div className="flex items-center gap-2 text-[10px] text-fg-muted tracking-widest">
-              <span className="h-1.5 w-1.5 rounded-full bg-electric animate-pulse-glow" />
-              DROP 01 · LIVE
+            <div className="flex items-center gap-4">
+              <a href="https://instagram.com/kaizencaps" target="_blank" rel="noreferrer"
+                aria-label="Instagram KΛIZEN"
+                className="text-fg-muted hover:text-electric transition-colors">
+                <Instagram className="w-4 h-4" />
+              </a>
+              <div className="flex items-center gap-1.5 text-[10px] text-fg-muted tracking-widest">
+                <span className="h-1.5 w-1.5 rounded-full bg-electric animate-pulse-glow" />
+                DROP 01
+              </div>
             </div>
           </div>
         </nav>
@@ -291,25 +383,30 @@ export default function BoutiquePage() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-bg-border text-[10px] tracking-widest text-fg-muted uppercase mb-6">
                 <Flame className="w-3 h-3 text-electric" />
-                Edición limitada · Calidad G5
+                Edición limitada · Curado a mano
               </div>
               <h1 className="brand-mark text-5xl md:text-7xl leading-[0.92] tracking-tight text-electric-gradient">
-                Cada gorra<br /><span className="text-electric">define</span><br />un status.
+                Cada gorra<br />
+                <span className="text-electric">define</span><br />
+                un status.
               </h1>
               <p className="mt-5 text-sm md:text-base text-fg-muted leading-relaxed max-w-md">
-                Drop por drop. Solo las más hype, curadas para los que entienden el juego.
+                Drop por drop. Solo las piezas más hype, seleccionadas para quienes entienden el juego.
               </p>
               <div className="mt-8 flex items-center gap-4">
-                <a href="#drop" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,.5)]">
-                  <Flame className="w-4 h-4" />Ver el Drop
+                <a href="#drop"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,.5)]">
+                  <Flame className="w-4 h-4" />
+                  Ver el Drop
                 </a>
-                <span className="text-xs text-fg-muted">{productos.length} disponibles</span>
+                <span className="text-xs text-fg-muted">{productos.length} piezas</span>
               </div>
             </div>
 
-            {/* Desktop hero — logo centrado en card glass */}
+            {/* Desktop: banner o logo */}
             <div className="hidden md:flex items-center justify-center">
-              <div className="relative w-[400px] h-[400px] glass rounded-[32px] flex items-center justify-center overflow-hidden">
+              <div className="relative w-[400px] h-[400px] glass rounded-[32px] overflow-hidden flex items-center justify-center">
+                {/* Cambia por: <Image src="/assets/banner_quality.jpg" alt="KΛIZEN" fill className="object-cover opacity-40" /> */}
                 <div className="absolute inset-0 bg-gradient-to-br from-electric/10 via-transparent to-transparent" />
                 <KaizenLogo variant="stacked" size={220} pulse className="relative z-10" />
               </div>
@@ -317,42 +414,69 @@ export default function BoutiquePage() {
           </motion.div>
         </section>
 
+        {/* FILTROS */}
+        <section className="px-5 md:px-10 max-w-6xl mx-auto mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {CATEGORIAS_FILTER.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveFilter(cat)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs tracking-wider border transition-all ${
+                  activeFilter === cat
+                    ? 'bg-electric border-electric text-white shadow-[0_0_20px_rgba(0,71,255,.4)]'
+                    : 'border-bg-border text-fg-muted hover:border-electric/50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* GRID */}
         <section id="drop" className="px-5 md:px-10 pb-32 max-w-6xl mx-auto">
           <div className="flex items-baseline justify-between mb-6">
             <h2 className="brand-mark text-base md:text-xl tracking-widest">CATÁLOGO</h2>
-            <span className="text-[10px] tracking-widest text-fg-muted uppercase">Tap para inspeccionar</span>
+            <span className="text-[10px] tracking-widest text-fg-muted uppercase">
+              {filtered.length} pieza{filtered.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="aspect-[3/4] rounded-2xl bg-bg-card/60 border border-bg-border animate-pulse" />
               ))}
             </div>
-          ) : productos.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="glass rounded-2xl p-10 text-center">
               <Flame className="w-8 h-8 text-electric mx-auto mb-3" />
-              <p className="brand-mark tracking-widest text-sm">DROP AGOTADO</p>
-              <p className="mt-2 text-xs text-fg-muted">Próximo restock pronto.</p>
+              <p className="brand-mark tracking-widest text-sm">SIN PIEZAS EN ESTA CATEGORÍA</p>
+              <p className="mt-2 text-xs text-fg-muted">Próximo drop pronto.</p>
             </div>
           ) : (
-            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
-              {productos.map((p, i) => (
-                <ProductCard key={p.id} p={p} onTap={() => setSelected(p)} index={i} />
-              ))}
+            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <AnimatePresence>
+                {filtered.map((p, i) => (
+                  <ProductCard key={p.id} p={p} onTap={() => setSelected(p)} index={i} />
+                ))}
+              </AnimatePresence>
             </motion.div>
           )}
         </section>
 
         {/* FOOTER */}
-        <footer className="border-t border-bg-border/40 px-5 py-8 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between">
+        <footer className="border-t border-bg-border/40 px-5 md:px-10 py-8 max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <KaizenLogo variant="horizontal" size={24} className="opacity-50" />
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"
-              className="text-fg-muted hover:text-electric transition-colors">
-              <Instagram className="w-4 h-4" />
-            </a>
+            <div className="flex items-center gap-4 text-fg-muted">
+              <a href="https://instagram.com/kaizencaps" target="_blank" rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs hover:text-electric transition-colors">
+                <Instagram className="w-3.5 h-3.5" />
+                @kaizencaps
+              </a>
+              <span className="text-[10px] opacity-40">© {new Date().getFullYear()} KΛIZEN CΛPS</span>
+            </div>
           </div>
         </footer>
       </main>
