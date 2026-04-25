@@ -4,6 +4,8 @@ export interface Producto {
   nombre: string;
   descripcion: string | null;
   precio: number;
+  precio_oferta: number | null;
+  en_promocion: boolean;
   categoria: string;
   imagen_url: string | null;
   imagenes: string[] | null;

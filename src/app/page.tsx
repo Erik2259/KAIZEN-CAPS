@@ -1,309 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import useEmblaCarousel from 'embla-carousel-react';
 import Image from 'next/image';
-import { ShoppingBag, X, Flame, Instagram, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Flame, Instagram } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { KaizenLogo } from '@/components/KaizenLogo';
+import { Gateway } from '@/components/Gateway';
+import { ProductModal } from '@/components/ProductModal';
 import type { Producto } from '@/types';
 
-const WA = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
+const CATEGORIAS_FILTER = ['Todos', 'KΛIZEN Essentials', 'Hype Selection', 'The Vault'] as const;
 
-const CATEGORIAS_FILTER = [
-  'Todos',
-  'KΛIZEN Essentials',
-  'Hype Selection',
-  'The Vault',
-] as const;
-
-function buildWA(p: Producto) {
-  const msg = [
-    `KΛIZEN CΛPS. Me interesa la pieza de la bóveda.`,
-    ``,
-    `Producto: ${p.nombre}`,
-    `Precio: $${p.precio.toFixed(2)} MXN`,
-    `Mi nombre es: `,
-    ``,
-    `Intención:`,
-    `( ) Quiero comprar ya`,
-    `( ) Solo deseo información`,
-  ].join('\n');
-  return `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
-}
-
-function getImages(p: Producto): string[] {
-  if (p.imagenes && p.imagenes.length > 0) return p.imagenes;
-  if (p.imagen_url) return [p.imagen_url];
-  return [];
-}
-
-/* ── GATEWAY ─────────────────────────────────────────────── */
-function GatewayScreen({ onEnter }: { onEnter: () => void }) {
-  return (
-    <motion.div
-      key="gateway"
-      className="fixed inset-0 z-[100] bg-[#0A0A0C] flex flex-col items-center justify-center gap-12"
-      exit={{ y: '-100%', transition: { duration: 0.85, ease: [0.76, 0, 0.24, 1] } }}
-    >
-      <KaizenLogo variant="stacked" size={160} pulse className="select-none" />
-      <motion.button
-        whileTap={{ scale: 0.94 }}
-        onClick={onEnter}
-        className="brand-mark px-10 py-4 rounded-full border border-electric text-electric text-sm tracking-[.3em] hover:bg-electric hover:text-white transition-all duration-300 hover:shadow-[0_0_40px_rgba(0,71,255,.5)]"
-      >
-        [ ENTRΛR ]
-      </motion.button>
-      <p className="absolute bottom-8 text-[9px] text-fg-muted tracking-widest opacity-40">DROP 01 · LIVE</p>
-    </motion.div>
-  );
-}
-
-/* ── EMBLA CAROUSEL ──────────────────────────────────────── */
-function ImageCarousel({ images, nombre }: { images: string[]; nombre: string }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
-  const [current, setCurrent] = useState(0);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    const onSelect = () => setCurrent(emblaApi.selectedScrollSnap());
-    emblaApi.on('select', onSelect);
-    return () => { emblaApi.off('select', onSelect); };
-  }, [emblaApi]);
-
-  const prev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const next = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-
-  if (images.length === 0) {
-    return (
-      <div className="w-full aspect-square flex items-center justify-center bg-bg-card">
-        <span className="text-fg-muted text-xs">Sin imagen</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative w-full bg-gradient-to-b from-electric/5 to-transparent">
-      <div ref={emblaRef} className="overflow-hidden w-full">
-        <div className="flex">
-          {images.map((url, i) => (
-            <div key={i} className="flex-[0_0_100%] relative aspect-square">
-              <Image
-                src={url}
-                alt={`${nombre} — vista ${i + 1}`}
-                fill
-                sizes="(max-width: 640px) 100vw, 50vw"
-                className="object-contain p-6 animate-float drop-shadow-[0_24px_48px_rgba(0,71,255,.4)]"
-                priority={i === 0}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {images.length > 1 && (
-        <>
-          <button onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform z-10">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/80 border border-bg-border flex items-center justify-center active:scale-90 transition-transform z-10">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <div className="flex justify-center gap-1.5 py-3">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => emblaApi?.scrollTo(i)}
-                className={`embla-dot ${i === current ? 'active' : ''}`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/* ── PRODUCT CARD ────────────────────────────────────────── */
-function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
-  const imgs = getImages(p);
-  return (
-    <motion.button
-      layoutId={`card-${p.id}`}
-      onClick={onTap}
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.35 }}
-      whileTap={{ scale: 0.97 }}
-      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left w-full"
-    >
-      {/* Imagen */}
-      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0">
-        {imgs[0] ? (
-          <div className="relative w-full h-full p-4">
-            <Image
-              src={imgs[0]}
-              alt={p.nombre}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
-            />
-          </div>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-fg-muted text-[10px]">
-            Sin imagen
-          </div>
-        )}
-      </motion.div>
-
-      {/* Badges */}
-      <motion.span layoutId={`cat-${p.id}`}
-        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
-        {p.categoria}
-      </motion.span>
-
-      {imgs.length > 1 && (
-        <span className="absolute top-3 right-3 text-[9px] text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
-          {imgs.length}✦
-        </span>
-      )}
-
-      {/* Info */}
-      <motion.div layoutId={`info-${p.id}`}
-        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10">
-        <motion.h3 layoutId={`name-${p.id}`}
-          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1">
-          {p.nombre}
-        </motion.h3>
-        <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-sm font-bold">
-          ${p.precio.toFixed(0)}
-          <span className="text-[10px] text-fg-muted ml-1 font-normal">MXN</span>
-        </motion.p>
-      </motion.div>
-    </motion.button>
-  );
-}
-
-/* ── PRODUCT MODAL ───────────────────────────────────────── */
-function ProductModal({ p, onClose }: { p: Producto; onClose: () => void }) {
-  const imgs = getImages(p);
-
-  const handleWA = () => {
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(50);
-    window.open(buildWA(p), '_blank', 'noreferrer');
-  };
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-      initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
-      animate={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
-      exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
-      style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
-      onClick={onClose}
-    >
-      <motion.div
-        layoutId={`card-${p.id}`}
-        onClick={(e) => e.stopPropagation()}
-        className="glass relative w-full sm:max-w-2xl max-h-[92dvh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:grid sm:grid-cols-2"
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-      >
-        {/* Close */}
-        <button onClick={onClose} aria-label="Cerrar"
-          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-bg/80 backdrop-blur border border-bg-border flex items-center justify-center active:scale-90 transition-transform">
-          <X className="w-4 h-4" />
-        </button>
-
-        {/* Handle mobile */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1 z-20 relative">
-          <div className="w-10 h-1 rounded-full bg-bg-border" />
-        </div>
-
-        {/* Carousel */}
-        <motion.div layoutId={`img-${p.id}`} className="flex-shrink-0 sm:h-full overflow-hidden">
-          <ImageCarousel images={imgs} nombre={p.nombre} />
-        </motion.div>
-
-        {/* Info + CTA */}
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-2">
-            <motion.span layoutId={`cat-${p.id}`}
-              className="text-[9px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80">
-              {p.categoria}
-            </motion.span>
-
-            <motion.div layoutId={`info-${p.id}`} className="mt-3">
-              <motion.h2 layoutId={`name-${p.id}`} className="brand-mark text-2xl md:text-3xl tracking-wide">
-                {p.nombre}
-              </motion.h2>
-              <motion.p layoutId={`price-${p.id}`} className="mt-1 text-electric text-3xl font-bold">
-                ${p.precio.toFixed(2)}
-                <span className="text-sm text-fg-muted ml-2 font-normal">MXN</span>
-              </motion.p>
-            </motion.div>
-
-            {/* Stock */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.15 }}
-              className="mt-3 flex items-center gap-2"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${p.stock > 2 ? 'bg-green-400' : p.stock > 0 ? 'bg-yellow-400' : 'bg-red-400'}`} />
-              <span className="text-[10px] text-fg-muted tracking-widest">
-                {p.stock > 2 ? 'Disponible' : p.stock > 0 ? `Últimas ${p.stock} piezas` : 'Sin stock'}
-              </span>
-            </motion.div>
-
-            {p.descripcion && (
-              <motion.p
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                className="mt-4 text-sm text-fg-muted leading-relaxed whitespace-pre-line">
-                {p.descripcion}
-              </motion.p>
-            )}
-
-            <motion.ul
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="mt-5 space-y-1.5 text-xs text-fg-muted">
-              {[
-                'Calidad de lujo — selección curada',
-                'Stock limitado del drop',
-                'Envío seguro o entrega en zona',
-              ].map(t => (
-                <li key={t} className="flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-electric flex-shrink-0" />{t}
-                </li>
-              ))}
-            </motion.ul>
-          </div>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-            className="flex-shrink-0 p-4 border-t border-bg-border bg-bg/80 backdrop-blur">
-            <button
-              onClick={handleWA}
-              disabled={p.stock === 0}
-              className="btn-sheen w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-electric text-white font-semibold tracking-wide active:scale-[0.97] transition-all hover:shadow-[0_0_40px_rgba(0,71,255,.6)] disabled:opacity-40 disabled:cursor-not-allowed disabled:animate-none"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              [ INICIΛR COMPRΛ ]
-            </button>
-            <p className="mt-2 text-center text-[9px] text-fg-muted tracking-widest">
-              CHECKOUT DIRECTO · RESPUESTA INMEDIATA
-            </p>
-          </motion.div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-/* ── MAIN PAGE ───────────────────────────────────────────── */
 export default function BoutiquePage() {
   const [entered, setEntered] = useState(false);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -322,14 +30,10 @@ export default function BoutiquePage() {
           .gt('stock', 0)
           .order('created_at', { ascending: false });
         if (error) throw error;
-        const list = (data ?? []) as Producto[];
-        setProductos(list);
-        setFiltered(list);
-      } catch (e) {
-        console.error('[kaizen]', e);
-      } finally {
-        setLoading(false);
-      }
+        setProductos((data ?? []) as Producto[]);
+        setFiltered((data ?? []) as Producto[]);
+      } catch (e) { console.error('[kaizen]', e); }
+      finally { setLoading(false); }
     };
     load();
   }, []);
@@ -350,14 +54,14 @@ export default function BoutiquePage() {
   return (
     <>
       <AnimatePresence>
-        {!entered && <GatewayScreen onEnter={() => setEntered(true)} />}
+        {!entered && <Gateway onEnter={() => setEntered(true)} />}
       </AnimatePresence>
 
       <main className="bg-glow min-h-dvh">
         {/* NAV */}
         <nav className="sticky top-0 z-40 px-5 md:px-10 py-3 backdrop-blur-xl bg-bg/70 border-b border-bg-border/40">
           <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <KaizenLogo variant="horizontal" size={32} />
+            <KaizenLogo variant="horizontal" size={30} />
             <div className="flex items-center gap-4">
               <a href="https://instagram.com/kaizencaps" target="_blank" rel="noreferrer"
                 aria-label="Instagram KΛIZEN"
@@ -377,7 +81,7 @@ export default function BoutiquePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: entered ? 1 : 0, y: entered ? 0 : 20 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
             className="md:grid md:grid-cols-2 md:gap-16 md:items-center"
           >
             <div>
@@ -386,9 +90,7 @@ export default function BoutiquePage() {
                 Edición limitada · Curado a mano
               </div>
               <h1 className="brand-mark text-5xl md:text-7xl leading-[0.92] tracking-tight text-electric-gradient">
-                Cada gorra<br />
-                <span className="text-electric">define</span><br />
-                un status.
+                Cada gorra<br /><span className="text-electric">define</span><br />un status.
               </h1>
               <p className="mt-5 text-sm md:text-base text-fg-muted leading-relaxed max-w-md">
                 Drop por drop. Solo las piezas más hype, seleccionadas para quienes entienden el juego.
@@ -403,11 +105,19 @@ export default function BoutiquePage() {
               </div>
             </div>
 
-            {/* Desktop: banner o logo */}
+            {/* Desktop hero — banner_vault.jpg o logo */}
             <div className="hidden md:flex items-center justify-center">
-              <div className="relative w-[400px] h-[400px] glass rounded-[32px] overflow-hidden flex items-center justify-center">
-                {/* Cambia por: <Image src="/assets/banner_quality.jpg" alt="KΛIZEN" fill className="object-cover opacity-40" /> */}
-                <div className="absolute inset-0 bg-gradient-to-br from-electric/10 via-transparent to-transparent" />
+              <div className="relative w-[420px] h-[420px] glass rounded-[32px] overflow-hidden flex items-center justify-center">
+                {/* Arrastra banner_vault.jpg a /public/assets/ para activar */}
+                <Image
+                  src="/assets/banner_vault.jpg"
+                  alt="KΛIZEN CΛPS"
+                  fill
+                  priority
+                  className="object-cover opacity-40"
+                  onError={e => { (e.target as HTMLElement).style.display = 'none'; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-electric/15 via-transparent to-transparent" />
                 <KaizenLogo variant="stacked" size={220} pulse className="relative z-10" />
               </div>
             </div>
@@ -416,7 +126,7 @@ export default function BoutiquePage() {
 
         {/* FILTROS */}
         <section className="px-5 md:px-10 max-w-6xl mx-auto mb-6">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {CATEGORIAS_FILTER.map(cat => (
               <button
                 key={cat}
@@ -485,5 +195,90 @@ export default function BoutiquePage() {
         {selected && <ProductModal p={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
     </>
+  );
+}
+
+/* ── PRODUCT CARD ────────────────────────────────────────── */
+function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
+  const firstImg = p.imagenes?.[0] ?? p.imagen_url ?? null;
+  const totalImgs = (p.imagenes?.length ?? 0) || (p.imagen_url ? 1 : 0);
+  const precioMostrar = p.en_promocion && p.precio_oferta ? p.precio_oferta : p.precio;
+
+  return (
+    <motion.button
+      layoutId={`card-${p.id}`}
+      onClick={onTap}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04, duration: 0.35 }}
+      whileTap={{ scale: 0.97 }}
+      className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left w-full"
+    >
+      {/* Imagen */}
+      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0">
+        {firstImg ? (
+          <div className="relative w-full h-full p-4">
+            <Image
+              src={firstImg}
+              alt={p.nombre}
+              fill
+              sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+              className="object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
+            />
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-fg-muted text-[10px]">
+            Sin imagen
+          </div>
+        )}
+      </motion.div>
+
+      {/* Badge categoría */}
+      <motion.span layoutId={`cat-${p.id}`}
+        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
+        {p.categoria}
+      </motion.span>
+
+      {/* Badge multi-foto */}
+      {totalImgs > 1 && (
+        <span className="absolute top-3 right-3 text-[9px] text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
+          {totalImgs}✦
+        </span>
+      )}
+
+      {/* Badge promo */}
+      {p.en_promocion && (
+        <span className="absolute top-10 left-3 text-[8px] tracking-widest uppercase text-electric px-2 py-0.5 rounded-full border border-electric/40 bg-electric/10 z-10">
+          PROMO
+        </span>
+      )}
+
+      {/* Urgencia de stock */}
+      {p.stock > 0 && p.stock < 3 && (
+        <motion.div
+          animate={{ opacity: [1, 0.4, 1] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+          className="absolute bottom-14 left-2 right-2 text-center text-[9px] text-red-300 bg-red-900/40 border border-red-500/30 rounded-full px-2 py-1 z-10"
+        >
+          🔥 Solo quedan {p.stock} piezas en la bóveda
+        </motion.div>
+      )}
+
+      {/* Info */}
+      <motion.div layoutId={`info-${p.id}`}
+        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10">
+        <motion.h3 layoutId={`name-${p.id}`}
+          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1">
+          {p.nombre}
+        </motion.h3>
+        <motion.div layoutId={`price-${p.id}`} className="mt-1 flex items-baseline gap-2">
+          <span className="text-electric text-sm font-bold">${precioMostrar.toFixed(0)}</span>
+          {p.en_promocion && p.precio_oferta && (
+            <span className="text-fg-muted text-[10px] line-through">${p.precio.toFixed(0)}</span>
+          )}
+          <span className="text-[10px] text-fg-muted font-normal">MXN</span>
+        </motion.div>
+      </motion.div>
+    </motion.button>
   );
 }
