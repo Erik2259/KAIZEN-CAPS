@@ -63,9 +63,13 @@ export default function BoutiquePage() {
           <div className="flex items-center justify-between max-w-6xl mx-auto">
             <KaizenLogo variant="horizontal" size={30} />
             <div className="flex items-center gap-4">
-              <a href="https://instagram.com/kaizencaps" target="_blank" rel="noreferrer"
+              <a
+                href="https://instagram.com/kaizencaps"
+                target="_blank"
+                rel="noreferrer"
                 aria-label="Instagram KΛIZEN"
-                className="text-fg-muted hover:text-electric transition-colors">
+                className="text-fg-muted hover:text-electric transition-colors"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
               <div className="flex items-center gap-1.5 text-[10px] text-fg-muted tracking-widest">
@@ -90,14 +94,18 @@ export default function BoutiquePage() {
                 Edición limitada · Curado a mano
               </div>
               <h1 className="brand-mark text-5xl md:text-7xl leading-[0.92] tracking-tight text-electric-gradient">
-                Cada gorra<br /><span className="text-electric">define</span><br />un status.
+                Cada gorra<br />
+                <span className="text-electric">define</span><br />
+                un status.
               </h1>
               <p className="mt-5 text-sm md:text-base text-fg-muted leading-relaxed max-w-md">
                 Drop por drop. Solo las piezas más hype, seleccionadas para quienes entienden el juego.
               </p>
               <div className="mt-8 flex items-center gap-4">
-                <a href="#drop"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,.5)]">
+                <a
+                  href="#drop"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-electric text-white text-sm font-semibold tracking-wide transition-all active:scale-95 hover:shadow-[0_0_30px_rgba(0,71,255,.5)]"
+                >
                   <Flame className="w-4 h-4" />
                   Ver el Drop
                 </a>
@@ -106,43 +114,38 @@ export default function BoutiquePage() {
             </div>
 
             {/* Desktop hero — Banner ancho con neon LED azul */}
-<div className="hidden md:flex items-center justify-center">
-  <div
-    className="relative w-full max-w-[560px] rounded-2xl overflow-hidden"
-    style={{
-      aspectRatio: '16/7',
-      boxShadow: `
-        0 0 0 1px rgba(0,71,255,0.5),
-        0 0 12px 2px rgba(0,71,255,0.4),
-        0 0 30px 6px rgba(0,71,255,0.25),
-        0 0 60px 12px rgba(0,71,255,0.12),
-        inset 0 0 30px rgba(0,71,255,0.05)
-      `,
-    }}
-  >
-    {/* Imagen principal */}
-    <Image
-      src="/assets/banner_vault.png"
-      alt="KΛIZEN CΛPS"
-      fill
-      priority
-      className="object-cover"
-    />
-
-    {/* Vignette sutil en bordes */}
-    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C]/40 via-transparent to-[#0A0A0C]/20 pointer-events-none" />
-    <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0C]/30 via-transparent to-[#0A0A0C]/30 pointer-events-none" />
-
-    {/* Borde neon animado — capa superior */}
-    <div
-      className="absolute inset-0 rounded-2xl pointer-events-none"
-      style={{
-        border: '1px solid rgba(0,71,255,0.6)',
-        animation: 'neon-border 3s ease-in-out infinite',
-      }}
-    />
-  </div>
-</div>
+            <div className="hidden md:flex items-center justify-center">
+              <div
+                className="relative w-full max-w-[560px] rounded-2xl overflow-hidden"
+                style={{
+                  aspectRatio: '16/7',
+                  boxShadow: `
+                    0 0 0 1px rgba(0,71,255,0.5),
+                    0 0 12px 2px rgba(0,71,255,0.4),
+                    0 0 30px 6px rgba(0,71,255,0.25),
+                    0 0 60px 12px rgba(0,71,255,0.12),
+                    inset 0 0 30px rgba(0,71,255,0.05)
+                  `,
+                }}
+              >
+                <Image
+                  src="/assets/banner_vault.png"
+                  alt="KΛIZEN CΛPS"
+                  fill
+                  priority
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C]/40 via-transparent to-[#0A0A0C]/20 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0C]/30 via-transparent to-[#0A0A0C]/30 pointer-events-none" />
+                <div
+                  className="absolute inset-0 rounded-2xl pointer-events-none"
+                  style={{
+                    border: '1px solid rgba(0,71,255,0.6)',
+                    animation: 'neon-border 3s ease-in-out infinite',
+                  }}
+                />
+              </div>
+            </div>
           </motion.div>
         </section>
 
@@ -202,8 +205,12 @@ export default function BoutiquePage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <KaizenLogo variant="horizontal" size={24} className="opacity-50" />
             <div className="flex items-center gap-4 text-fg-muted">
-              <a href="https://instagram.com/kaizencaps" target="_blank" rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs hover:text-electric transition-colors">
+              <a
+                href="https://instagram.com/kaizencaps"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs hover:text-electric transition-colors"
+              >
                 <Instagram className="w-3.5 h-3.5" />
                 @kaizencaps
               </a>
@@ -222,9 +229,26 @@ export default function BoutiquePage() {
 
 /* ── PRODUCT CARD ────────────────────────────────────────── */
 function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
-  const firstImg = p.imagenes?.[0] ?? p.imagen_url ?? null;
-  const totalImgs = (p.imagenes?.length ?? 0) || (p.imagen_url ? 1 : 0);
+  const allImgs = [
+    ...(p.imagenes?.length ? p.imagenes : []),
+    ...(p.imagen_url && !p.imagenes?.includes(p.imagen_url) ? [p.imagen_url] : []),
+  ].filter(Boolean) as string[];
+
+  const imgs = allImgs.length > 0 ? allImgs : (p.imagen_url ? [p.imagen_url] : []);
+  const [imgIndex, setImgIndex] = useState(0);
+  const totalImgs = imgs.length;
   const precioMostrar = p.en_promocion && p.precio_oferta ? p.precio_oferta : p.precio;
+
+  // Auto-rotate cada 2.5 segundos
+  useEffect(() => {
+    if (totalImgs <= 1) return;
+    const t = setInterval(() => {
+      setImgIndex(i => (i + 1) % totalImgs);
+    }, 2500);
+    return () => clearInterval(t);
+  }, [totalImgs]);
+
+  const currentImg = imgs[imgIndex] ?? null;
 
   return (
     <motion.button
@@ -236,18 +260,27 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       whileTap={{ scale: 0.97 }}
       className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left w-full"
     >
-      {/* Imagen */}
+      {/* Imagen con crossfade automático */}
       <motion.div layoutId={`img-${p.id}`} className="absolute inset-0">
-        {firstImg ? (
-          <div className="relative w-full h-full p-4">
-            <Image
-              src={firstImg}
-              alt={p.nombre}
-              fill
-              sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
-              className="object-contain animate-float drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
-            />
-          </div>
+        {currentImg ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={imgIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              className="relative w-full h-full p-4"
+            >
+              <Image
+                src={currentImg}
+                alt={p.nombre}
+                fill
+                sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+                className="object-contain drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
+              />
+            </motion.div>
+          </AnimatePresence>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-fg-muted text-[10px]">
             Sin imagen
@@ -256,16 +289,25 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       </motion.div>
 
       {/* Badge categoría */}
-      <motion.span layoutId={`cat-${p.id}`}
-        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
+      <motion.span
+        layoutId={`cat-${p.id}`}
+        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10"
+      >
         {p.categoria}
       </motion.span>
 
-      {/* Badge multi-foto */}
+      {/* Dots indicadores — solo si hay más de 1 imagen */}
       {totalImgs > 1 && (
-        <span className="absolute top-3 right-3 text-[9px] text-fg-muted px-1.5 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
-          {totalImgs}✦
-        </span>
+        <div className="absolute top-3 right-3 flex gap-1 z-10">
+          {imgs.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                i === imgIndex ? 'w-4 bg-electric' : 'w-1 bg-bg-border'
+              }`}
+            />
+          ))}
+        </div>
       )}
 
       {/* Badge promo */}
@@ -287,10 +329,14 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       )}
 
       {/* Info */}
-      <motion.div layoutId={`info-${p.id}`}
-        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10">
-        <motion.h3 layoutId={`name-${p.id}`}
-          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1">
+      <motion.div
+        layoutId={`info-${p.id}`}
+        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10"
+      >
+        <motion.h3
+          layoutId={`name-${p.id}`}
+          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1"
+        >
           {p.nombre}
         </motion.h3>
         <motion.div layoutId={`price-${p.id}`} className="mt-1 flex items-baseline gap-2">
