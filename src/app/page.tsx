@@ -227,28 +227,29 @@ export default function BoutiquePage() {
   );
 }
 
-/* ── PRODUCT CARD ────────────────────────────────────────── */
 function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; index: number }) {
-  const allImgs = [
-    ...(p.imagenes?.length ? p.imagenes : []),
-    ...(p.imagen_url && !p.imagenes?.includes(p.imagen_url) ? [p.imagen_url] : []),
-  ].filter(Boolean) as string[];
+  const imgs = (() => {
+    const list = p.imagenes?.length ? [...p.imagenes] : [];
+    if (p.imagen_url && !list.includes(p.imagen_url)) list.push(p.imagen_url);
+    return list.filter(Boolean) as string[];
+  })();
 
-  const imgs = allImgs.length > 0 ? allImgs : (p.imagen_url ? [p.imagen_url] : []);
   const [imgIndex, setImgIndex] = useState(0);
   const totalImgs = imgs.length;
   const precioMostrar = p.en_promocion && p.precio_oferta ? p.precio_oferta : p.precio;
 
-  // Auto-rotate cada 2.5 segundos
+  // Stagger inicial para que NO arranquen todas al mismo tiempo
   useEffect(() => {
     if (totalImgs <= 1) return;
-    const t = setInterval(() => {
-      setImgIndex(i => (i + 1) % totalImgs);
-    }, 3500);
-    return () => clearInterval(t);
-  }, [totalImgs]);
-
-  const currentImg = imgs[imgIndex] ?? null;
+    const delay = (index % 6) * 400; // cada card desfasada 400ms
+    const timeout = setTimeout(() => {
+      const t = setInterval(() => {
+        setImgIndex(i => (i + 1) % totalImgs);
+      }, 2500);
+      return () => clearInterval(t);
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [totalImgs, index]);
 
   return (
     <motion.button
@@ -260,51 +261,53 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       whileTap={{ scale: 0.97 }}
       className="glass glass-hover relative aspect-[3/4] rounded-2xl overflow-hidden text-left w-full"
     >
-      {/* Imagen con crossfade automático */}
-      <motion.div layoutId={`img-${p.id}`} className="absolute inset-0">
-        {currentImg ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={imgIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="relative w-full h-full p-4"
+      {/* Imágenes apiladas con CSS opacity — sin JS ni re-renders */}
+      <div className="absolute inset-0">
+        {imgs.length > 0 ? (
+          imgs.map((url, i) => (
+            <div
+              key={url}
+              className="absolute inset-0 p-4"
+              style={{
+                opacity: i === imgIndex ? 1 : 0,
+                transition: 'opacity 0.7s ease',
+                willChange: 'opacity',
+              }}
             >
               <Image
-                src={currentImg}
+                src={url}
                 alt={p.nombre}
                 fill
-                sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+                sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
                 className="object-contain drop-shadow-[0_10px_25px_rgba(0,71,255,.3)]"
+                loading={i === 0 ? 'eager' : 'lazy'}
               />
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ))
         ) : (
           <div className="w-full h-full flex items-center justify-center text-fg-muted text-[10px]">
             Sin imagen
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Badge categoría */}
-      <motion.span
-        layoutId={`cat-${p.id}`}
-        className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10"
-      >
+      <span className="absolute top-3 left-3 text-[8px] tracking-widest uppercase text-fg-muted px-2 py-0.5 rounded-full border border-bg-border bg-bg/80 z-10">
         {p.categoria}
-      </motion.span>
+      </span>
 
-      {/* Dots indicadores — solo si hay más de 1 imagen */}
+      {/* Dots indicadores */}
       {totalImgs > 1 && (
         <div className="absolute top-3 right-3 flex gap-1 z-10">
           {imgs.map((_, i) => (
             <div
               key={i}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                i === imgIndex ? 'w-4 bg-electric' : 'w-1 bg-bg-border'
-              }`}
+              className="h-1 rounded-full bg-bg-border"
+              style={{
+                width: i === imgIndex ? '16px' : '4px',
+                background: i === imgIndex ? '#0047FF' : undefined,
+                transition: 'all 0.3s ease',
+              }}
             />
           ))}
         </div>
@@ -317,7 +320,7 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
         </span>
       )}
 
-      {/* Urgencia de stock */}
+      {/* Urgencia */}
       {p.stock > 0 && p.stock < 3 && (
         <motion.div
           animate={{ opacity: [1, 0.4, 1] }}
@@ -329,24 +332,18 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
       )}
 
       {/* Info */}
-      <motion.div
-        layoutId={`info-${p.id}`}
-        className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10"
-      >
-        <motion.h3
-          layoutId={`name-${p.id}`}
-          className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1"
-        >
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-bg via-bg/95 to-transparent z-10">
+        <h3 className="brand-mark text-[12px] md:text-sm text-fg leading-tight line-clamp-1">
           {p.nombre}
-        </motion.h3>
-        <motion.div layoutId={`price-${p.id}`} className="mt-1 flex items-baseline gap-2">
+        </h3>
+        <div className="mt-1 flex items-baseline gap-2">
           <span className="text-electric text-sm font-bold">${precioMostrar.toFixed(0)}</span>
           {p.en_promocion && p.precio_oferta && (
             <span className="text-fg-muted text-[10px] line-through">${p.precio.toFixed(0)}</span>
           )}
           <span className="text-[10px] text-fg-muted font-normal">MXN</span>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </motion.button>
   );
 }
