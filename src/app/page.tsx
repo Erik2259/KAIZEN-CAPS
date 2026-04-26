@@ -244,7 +244,7 @@ function ProductCard({ p, onTap, index }: { p: Producto; onTap: () => void; inde
     if (totalImgs <= 1) return;
     const t = setInterval(() => {
       setImgIndex(i => (i + 1) % totalImgs);
-    }, 2500);
+    }, 3500);
     return () => clearInterval(t);
   }, [totalImgs]);
 
