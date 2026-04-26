@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import Image from 'next/image';
@@ -40,10 +40,127 @@ function getImages(p: Producto): string[] {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   EMBLA CAROUSEL — altura controlada por el padre
+   ZOOMABLE IMAGE — pinch to zoom + double tap reset
+───────────────────────────────────────────────────────────── */
+function ZoomableImage({ src, alt, onZoomChange }: {
+  src: string;
+  alt: string;
+  onZoomChange: (zoomed: boolean) => void;
+}) {
+  const [scale, setScale] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const lastTap = useRef(0);
+  const lastDist = useRef<number | null>(null);
+  const lastMid = useRef({ x: 0, y: 0 });
+
+  const getDist = (t: React.TouchList) => {
+    const dx = t[0].clientX - t[1].clientX;
+    const dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const reset = useCallback(() => {
+    setScale(1);
+    setPos({ x: 0, y: 0 });
+    onZoomChange(false);
+  }, [onZoomChange]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      lastDist.current = getDist(e.touches);
+      lastMid.current = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    } else if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap.current < 280) reset();
+      lastTap.current = now;
+      lastMid.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.stopPropagation();
+      if (lastDist.current === null) return;
+      const newDist = getDist(e.touches);
+      const newScale = Math.min(4, Math.max(1, scale * (newDist / lastDist.current)));
+      lastDist.current = newDist;
+      setScale(newScale);
+      onZoomChange(newScale > 1.05);
+    } else if (e.touches.length === 1 && scale > 1.05) {
+      e.stopPropagation();
+      const dx = e.touches[0].clientX - lastMid.current.x;
+      const dy = e.touches[0].clientY - lastMid.current.y;
+      lastMid.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      setPos(p => ({ x: p.x + dx, y: p.y + dy }));
+    }
+  };
+
+  const onTouchEnd = () => {
+    lastDist.current = null;
+    if (scale < 1.05) reset();
+  };
+
+  const isZoomed = scale > 1.05;
+
+  return (
+    <div
+      className="w-full h-full relative overflow-hidden"
+      style={{ touchAction: isZoomed ? 'none' : 'pan-y' }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transform: `scale(${scale}) translate(${pos.x / scale}px, ${pos.y / scale}px)`,
+          transformOrigin: 'center center',
+          transition: isZoomed ? 'none' : 'transform 0.3s ease',
+          willChange: 'transform',
+        }}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(max-width:640px) 100vw, 50vw"
+          className="object-contain p-6 drop-shadow-[0_20px_40px_rgba(0,71,255,.4)]"
+          priority
+          draggable={false}
+        />
+      </div>
+
+      {/* Hint */}
+      {!isZoomed && (
+        <span className="absolute bottom-2 left-0 right-0 text-center text-[9px] text-[#2A2A35] tracking-widest pointer-events-none select-none">
+          PELLIZCA PARA ZOOM · DOBLE TAP PARA RESET
+        </span>
+      )}
+
+      {/* Reset button cuando zoomed */}
+      {isZoomed && (
+        <button
+          onClick={reset}
+          className="absolute top-2 left-2 z-20 text-[9px] tracking-widest text-[#8A8A95] bg-[#0A0A0C]/80 border border-[#2A2A35] rounded-full px-2.5 py-1 active:scale-95 transition-transform"
+        >
+          ↺ RESET
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   EMBLA CAROUSEL — con zoom integrado
 ───────────────────────────────────────────────────────────── */
 function ImageCarousel({ images, nombre }: { images: string[]; nombre: string }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, watchDrag: !isZoomed });
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -53,8 +170,13 @@ function ImageCarousel({ images, nombre }: { images: string[]; nombre: string })
     return () => { emblaApi.off('select', fn); };
   }, [emblaApi]);
 
-  const prev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const next = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.reInit({ watchDrag: !isZoomed });
+  }, [isZoomed, emblaApi]);
+
+  const prev = useCallback(() => { if (!isZoomed) emblaApi?.scrollPrev(); }, [emblaApi, isZoomed]);
+  const next = useCallback(() => { if (!isZoomed) emblaApi?.scrollNext(); }, [emblaApi, isZoomed]);
 
   if (!images.length) {
     return (
@@ -66,29 +188,25 @@ function ImageCarousel({ images, nombre }: { images: string[]; nombre: string })
 
   return (
     <div className="relative w-full h-full">
-      {/* Track */}
       <div ref={emblaRef} className="overflow-hidden w-full h-full">
-        <div className="flex h-full touch-pan-y">
+        <div className="flex h-full">
           {images.map((url, i) => (
             <div
               key={i}
               className="flex-[0_0_100%] relative h-full bg-gradient-to-b from-[#0047FF]/5 to-transparent"
             >
-              <Image
+              <ZoomableImage
                 src={url}
                 alt={`${nombre} — ${i + 1}`}
-                fill
-                sizes="(max-width:640px) 100vw, 50vw"
-                className="object-contain p-6 drop-shadow-[0_20px_40px_rgba(0,71,255,.4)]"
-                priority={i === 0}
+                onZoomChange={setIsZoomed}
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Arrows */}
-      {images.length > 1 && (
+      {/* Arrows y dots — ocultos con zoom */}
+      {images.length > 1 && !isZoomed && (
         <>
           <button
             onClick={prev}
@@ -102,8 +220,6 @@ function ImageCarousel({ images, nombre }: { images: string[]; nombre: string })
           >
             <ChevronRight className="w-4 h-4 text-[#EDEDED]" />
           </button>
-
-          {/* Dots */}
           <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
             {images.map((_, i) => (
               <button
@@ -121,8 +237,6 @@ function ImageCarousel({ images, nombre }: { images: string[]; nombre: string })
 
 /* ─────────────────────────────────────────────────────────────
    PRODUCT MODAL
-   • Móvil: bottom sheet 90dvh, rounded-t-3xl, swipe feel
-   • Desktop: modal centrado max-w-2xl grid 2 cols
 ───────────────────────────────────────────────────────────── */
 export function ProductModal({
   p,
@@ -135,11 +249,9 @@ export function ProductModal({
   const [intent, setIntent] = useState<Intent | null>(null);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [dragY, setDragY] = useState(0);
   const imgs = getImages(p);
   const precio = p.en_promocion && p.precio_oferta ? p.precio_oferta : p.precio;
-
-  /* Swipe down to close (móvil) */
-  const [dragY, setDragY] = useState(0);
 
   const fireWA = (logistica?: string) => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(50);
@@ -154,17 +266,16 @@ export function ProductModal({
     else setStep('logistics');
   };
 
-  /* ── Step: Detail content ── */
+  /* ── Detail ── */
   const DetailContent = (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scroll-ios px-5 pt-4 pb-2">
-        {/* Categoría */}
         <span className="text-[9px] tracking-widest uppercase text-[#8A8A95] px-2 py-0.5 rounded-full border border-[#2A2A35] bg-[#0A0A0C]/80">
           {p.categoria}
         </span>
 
-        {/* Nombre + precio */}
         <h2 className="brand-mark text-2xl md:text-3xl mt-3 leading-tight">{p.nombre}</h2>
+
         <div className="mt-2 flex items-baseline gap-2 flex-wrap">
           {p.en_promocion && p.precio_oferta ? (
             <>
@@ -180,7 +291,6 @@ export function ProductModal({
           )}
         </div>
 
-        {/* Stock urgencia */}
         {p.stock > 0 && p.stock < 3 && (
           <motion.div
             animate={{ opacity: [1, 0.5, 1] }}
@@ -191,14 +301,12 @@ export function ProductModal({
           </motion.div>
         )}
 
-        {/* Descripción */}
         {p.descripcion && (
           <p className="mt-4 text-sm text-[#8A8A95] leading-relaxed whitespace-pre-line">
             {p.descripcion}
           </p>
         )}
 
-        {/* Features */}
         <ul className="mt-5 space-y-2">
           {['Selección curada de lujo', 'Stock exclusivo del drop', 'Envío o entrega en zona'].map(t => (
             <li key={t} className="flex items-center gap-2 text-xs text-[#8A8A95]">
@@ -209,7 +317,6 @@ export function ProductModal({
         </ul>
       </div>
 
-      {/* CTA fijo */}
       <div className="flex-shrink-0 px-5 pt-3 pb-safe border-t border-[#2A2A35] bg-[#0A0A0C]">
         <button
           onClick={() => setStep('capture')}
@@ -226,7 +333,7 @@ export function ProductModal({
     </div>
   );
 
-  /* ── Step: Capture ── */
+  /* ── Capture ── */
   const CaptureContent = (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scroll-ios px-5 pt-4 pb-2">
@@ -242,10 +349,7 @@ export function ProductModal({
           Para asegurarte la pieza necesitamos tus datos. Solo tarda 10 segundos.
         </p>
 
-        {/* Nombre */}
-        <label className="block text-[10px] tracking-widests text-[#8A8A95] uppercase mb-1.5">
-          Tu Nombre
-        </label>
+        <label className="block text-[10px] tracking-widest text-[#8A8A95] uppercase mb-1.5">Tu Nombre</label>
         <div className="relative mb-4">
           <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8A95]" />
           <input
@@ -258,10 +362,7 @@ export function ProductModal({
           />
         </div>
 
-        {/* Teléfono */}
-        <label className="block text-[10px] tracking-widests text-[#8A8A95] uppercase mb-1.5">
-          Tu Teléfono
-        </label>
+        <label className="block text-[10px] tracking-widest text-[#8A8A95] uppercase mb-1.5">Tu Teléfono</label>
         <div className="relative mb-4">
           <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8A95]" />
           <input
@@ -275,7 +376,6 @@ export function ProductModal({
           />
         </div>
 
-        {/* Resumen pieza */}
         <div className="glass rounded-xl p-3 flex items-center justify-between mt-2">
           <div>
             <p className="text-xs text-[#8A8A95]">Pieza seleccionada</p>
@@ -285,7 +385,6 @@ export function ProductModal({
         </div>
       </div>
 
-      {/* Botones intención fijos */}
       <div className="flex-shrink-0 px-5 pt-3 pb-safe border-t border-[#2A2A35] bg-[#0A0A0C] space-y-2.5">
         <p className="text-[9px] text-center text-[#8A8A95] tracking-widest uppercase mb-1">¿Cuál es tu intención?</p>
         <button
@@ -308,7 +407,7 @@ export function ProductModal({
     </div>
   );
 
-  /* ── Step: Logistics ── */
+  /* ── Logistics ── */
   const LogisticsContent = (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scroll-ios px-5 pt-4 pb-2">
@@ -322,7 +421,6 @@ export function ProductModal({
         <h3 className="brand-mark text-xl leading-tight mb-1">¿Cómo la recibiste?</h3>
         <p className="text-xs text-[#8A8A95] mb-6">Logística en Tulancingo.</p>
 
-        {/* Resumen */}
         <div className="glass rounded-xl p-3 mb-4">
           <p className="text-[10px] text-[#8A8A95] uppercase tracking-widest mb-1">Confirmación</p>
           <p className="text-sm font-semibold">{nombre}</p>
@@ -331,7 +429,6 @@ export function ProductModal({
         </div>
       </div>
 
-      {/* Opciones fijas */}
       <div className="flex-shrink-0 px-5 pt-3 pb-safe border-t border-[#2A2A35] bg-[#0A0A0C] space-y-2.5">
         <button
           onClick={() => fireWA('Punto Medio')}
@@ -357,7 +454,6 @@ export function ProductModal({
     logistics: LogisticsContent,
   };
 
-  /* ─────────────────────────────────────────────────────── */
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
@@ -367,10 +463,6 @@ export function ProductModal({
       style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       onClick={onClose}
     >
-      {/* ── CONTENEDOR PRINCIPAL ──────────────────────────
-          Móvil:   bottom sheet  inset-x-0 bottom-0 h-[90dvh] rounded-t-3xl
-          Desktop: modal centrado max-w-2xl rounded-3xl
-      ─────────────────────────────────────────────────── */}
       <motion.div
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
@@ -384,7 +476,6 @@ export function ProductModal({
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className="
-          /* ── Móvil (base) ── */
           fixed inset-x-0 bottom-0
           h-[90dvh]
           rounded-t-3xl
@@ -393,8 +484,6 @@ export function ProductModal({
           flex flex-col
           overflow-hidden
           will-change-transform
-
-          /* ── Desktop ── */
           md:relative md:inset-auto
           md:max-w-2xl md:w-full
           md:h-auto md:max-h-[85dvh]
@@ -403,12 +492,12 @@ export function ProductModal({
           md:grid md:grid-cols-2
         "
       >
-        {/* Handle bar — solo móvil */}
+        {/* Handle bar móvil */}
         <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 rounded-full bg-[#2A2A35]" />
         </div>
 
-        {/* Botón cerrar */}
+        {/* Close */}
         <button
           onClick={onClose}
           aria-label="Cerrar"
@@ -417,23 +506,12 @@ export function ProductModal({
           <X className="w-4 h-4" />
         </button>
 
-        {/* ── SECCIÓN IMAGEN ────────────────────────────────
-            Altura fija en móvil (40dvh), full en desktop
-        ─────────────────────────────────────────────────── */}
-        <div
-          className="
-            relative flex-shrink-0
-            h-[40dvh]
-            md:h-full md:min-h-[400px]
-            bg-gradient-to-b from-[#0047FF]/5 to-transparent
-          "
-        >
+        {/* Imagen */}
+        <div className="relative flex-shrink-0 h-[40dvh] md:h-full md:min-h-[400px] bg-gradient-to-b from-[#0047FF]/5 to-transparent">
           <ImageCarousel images={imgs} nombre={p.nombre} />
         </div>
 
-        {/* ── SECCIÓN CONTENIDO ────────────────────────────
-            flex-1 + overflow-y-auto = scroll sin empujar imagen
-        ─────────────────────────────────────────────────── */}
+        {/* Contenido */}
         <div className="flex-1 min-h-0 flex flex-col md:max-h-[85dvh]">
           <AnimatePresence mode="wait">
             <motion.div
